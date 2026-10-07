@@ -1,3 +1,4 @@
+# Train classifiers, explore AI sentence clusters, and save metrics and models.
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedGroupKFold, RandomizedSearchCV
@@ -23,14 +24,17 @@ from pathlib import Path
 from sklearn.decomposition import PCA
 import numpy as np
 
+# Paths are relative to the project directory; reruns overwrite saved outputs.
 model_dir = Path("Models")
 fig_dir = Path("model_evaluation")
 model_dir.mkdir(parents=True, exist_ok=True)
 fig_dir.mkdir(parents=True, exist_ok=True)
+# Load the document-separated sentence datasets produced by DataProcessing.py.
 test_df = pd.read_csv('data/test_sentences.csv')
 train_df = pd.read_csv('data/train_sentences.csv')
 val_df = pd.read_csv('data/val_sentences.csv')
 
+# Keep feature order consistent for training and later saved-model inference.
 features = [
     'word_count',
     'avg_word_length',
@@ -48,6 +52,7 @@ features = [
 
 scaler = StandardScaler()
 
+# Split features and labels from datasets
 train_X = train_df[features]
 train_y = train_df['label']
 test_X = test_df[features]
@@ -55,6 +60,7 @@ test_y = test_df['label']
 val_X = val_df[features]
 val_y = val_df['label']
 
+# Learn scaling from training data only, then reuse it for validation and testing.
 scaled_train_X = scaler.fit_transform(train_X)
 scaled_test_X = scaler.transform(test_X)
 scaled_val_X = scaler.transform(val_X)
@@ -65,9 +71,12 @@ joblib.dump(scaler, model_dir / "scaler.pkl")
 #---------------------------------------------------------------------------
 
 
+# Establish a baseline model,  balanced weights compensate for class imbalance.
 model = LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced")
 model.fit(scaled_train_X, train_y)
 val_prediction = model.predict(scaled_val_X)
+
+# Class 1 is AI-generated; ranking metrics use its predicted probabilities.
 val_probabilities = model.predict_proba(scaled_val_X)[:, 1]
 
 print("Validation Metrics:")
@@ -79,6 +88,8 @@ print("Confusion Matrix:\n", confusion_matrix(val_y, val_prediction))
 print("ROC-AUC:", roc_auc_score(val_y, val_probabilities))
 print("PR-AUC:", average_precision_score(val_y, val_probabilities))
 
+# Choose regularisation strength on validation average precision (reported as PR-AUC).
+# Smaller C values apply stronger regularisation.
 c_values = [0.01, 0.1, 1, 10, 100]
 C_results = {}
 for c in c_values:
@@ -93,6 +104,7 @@ for c in c_values:
 best_c = max(C_results, key=C_results.get)
 print(f"Best C value: {best_c} with Average Precision={C_results[best_c]:.4f}")
 
+# Select the probability cutoff with the highest validation F1 score.
 thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 threshold_results = {}
 best_c_model = LogisticRegression(C=best_c, max_iter=1000, random_state=42, class_weight="balanced")
@@ -108,6 +120,7 @@ for threshold in thresholds:
 best_threshold = max(threshold_results, key=threshold_results.get)
 print(f"Best threshold: {best_threshold} with F1 score={threshold_results[best_threshold]:.4f}")
 
+# Evaluate the chosen settings on the held-out test set.
 tuned_model = LogisticRegression(C=best_c, max_iter=1000, random_state=42, class_weight="balanced")
 tuned_model.fit(scaled_train_X, train_y)
 logistic_probabilities = tuned_model.predict_proba(scaled_test_X)[:, 1]
@@ -138,11 +151,14 @@ joblib.dump(tuned_model, model_dir / "LogisticModel.pkl")
 #---------------------------------------------------------------------------
 #                            KMeans Clustering
 #---------------------------------------------------------------------------
+# Explore variation within AI-generated training sentences, using a separate scaler.
 ai_train = train_df[train_df['label'] == 1].copy()
 X_ai = ai_train[features]
 kmeans_scaler = StandardScaler()
 X_ai_scaled = kmeans_scaler.fit_transform(X_ai)
 
+# Compare 2-6 clusters on the AI training subset; larger silhouette scores are better.
+# Full-data silhouette scoring can be costly for large sentence datasets.
 k_scores = {}
 for k in range(2, 7):
     model = KMeans(n_clusters=k, random_state=42, n_init=50)
@@ -167,11 +183,13 @@ kmeans_model.fit(X_ai_scaled)
 ai_train['cluster'] = kmeans_model.labels_
 ai_means = ai_train[features].mean()
 cluster_means = ai_train.groupby("cluster")[features].mean()
+# Convert cluster centres back to original feature units for interpretation.
 centers = pd.DataFrame(kmeans_scaler.inverse_transform(kmeans_model.cluster_centers_), columns=features)
 print("Overall Means:\n", ai_means)
 print("Cluster Means:\n", cluster_means)
 print("Cluster Centers:\n", centers)
 
+# Print up to three reproducible example sentences from each cluster.
 for cluster in sorted(ai_train['cluster'].unique()):
     print(f"\nCluster {cluster}")
     examples = ai_train[ai_train['cluster'] == cluster]['sentence'].sample(min(3, sum(ai_train['cluster'] == cluster)), random_state=42)
@@ -184,6 +202,8 @@ cluster_means = (
     ai_train.groupby("cluster")[features].mean()
 )
 
+# Express cluster means as deviations from the AI-class mean in standard deviations.
+# Replacing zero standard deviations avoids division by zero for constant features.
 cluster_profiles_ai = (
     cluster_means - ai_means
 ) / ai_std.replace(0, 1)
@@ -227,6 +247,7 @@ joblib.dump(kmeans_scaler, model_dir / "KmeansScaler.pkl")
 #----------------------------------------------------------------------------
 #                               PCA
 #----------------------------------------------------------------------------
+# Project AI features into two dimensions for display; K-Means uses all features.
 pca = PCA(n_components=2)
 X_ai_pca = pca.fit_transform(X_ai_scaled)
 fig,  ax = plt.subplots(figsize=(8, 6))
@@ -249,6 +270,8 @@ ax.legend(*scatter.legend_elements(), title="Cluster")
 plt.tight_layout()
 plt.savefig(fig_dir / "Kmeans_PCA_Visualisation.png")
 plt.close(fig)
+
+# Separately inspect cumulative explained variance across all training sentences.
 pca_full = PCA()
 pca_full.fit(scaled_train_X)
 
@@ -285,6 +308,7 @@ xgb_model = XGBClassifier(
     random_state=42,
 )
 
+# Candidate settings for a reproducible random search over boosted-tree models.
 param_grid = {
     'n_estimators': [100, 200, 300, 400, 500],
     'max_depth': [3, 4, 5, 6, 7],
@@ -297,6 +321,8 @@ param_grid = {
     'reg_lambda': [1, 2, 5, 10],
 }
 
+# Keep sentences from one doc_ID in the same fold, while balancing labels as possible.
+# Search 75 candidates across five folds and rank them by average precision.
 cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)
 search = RandomizedSearchCV(
     estimator=xgb_model,
@@ -309,6 +335,7 @@ search = RandomizedSearchCV(
     n_jobs=-1
 )
 
+# Tree models use unscaled features. The search refits the best model on training data.
 search.fit(train_X, train_y, groups=train_df['doc_ID'])
 print("Best parameters found: ", search.best_params_)
 print("Best average precision score found: ", search.best_score_)
@@ -317,6 +344,7 @@ best_xgb_model = search.best_estimator_
 
 val_prob = best_xgb_model.predict_proba(val_X)[:, 1]
 
+# Compare validation cutoffs for both F1 and precision-focused predictions.
 xgb_threshold_results = {}
 xgb_precision_threshold_results = {}
 xgb_thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
@@ -341,6 +369,7 @@ best_xgb_thres = max(xgb_threshold_results, key=xgb_threshold_results.get)
 print(f"Best F1 threshold: {best_xgb_thres} with F1 Score={xgb_threshold_results[best_xgb_thres]:.4f}")
 best_precision_thres = max(xgb_precision_threshold_results, key=xgb_precision_threshold_results.get)
 print(f"Best Precision threshold: {best_precision_thres} with Precision Score={xgb_precision_threshold_results[best_precision_thres]:.4f}")
+# Test the F1-selected cutoff first, then the precision-selected cutoff below.
 xgb_tuned_probabilities = best_xgb_model.predict_proba(test_X)[:, 1]
 xgb_tuned_predictions = (xgb_tuned_probabilities >= best_xgb_thres).astype(int)
 xgb_accuracy = accuracy_score(test_y, xgb_tuned_predictions)
@@ -373,6 +402,7 @@ print("Confusion Matrix:\n", confusion_matrix(test_y, xgb_precision_predict))
 print("ROC-AUC:", xgb_ROC)
 print("PR_AUC:", xgb_AP)
 
+# Gain measures the average improvement from tree splits using each feature.
 gain_scores = booster.get_score(
     importance_type="gain"
 )
@@ -391,12 +421,14 @@ plt.title("Confusion Matrix for XGBoost Classifier - Precision")
 plt.savefig(fig_dir / "xgb_confusion_matrix.png")
 plt.close()
 
+# Precision-recall curves compare classifiers across probability cutoffs.
 fig, ax = plt.subplots()
 PrecisionRecallDisplay.from_predictions(test_y, xgb_tuned_probabilities, name="XGBoost Classifier", ax=ax)
 PrecisionRecallDisplay.from_predictions(test_y, logistic_probabilities, name="Logistic Regression", ax=ax)
 ax.set_title("Precision-Recall Curves")
 fig.savefig(fig_dir / "precision_recall_curves.png")
 plt.close(fig)
+# Compare logistic regression's F1 cutoff with XGBoost's precision-focused cutoff.
 results_df = pd.DataFrame({
     'Model': ['Logistic Regression', 'XGBoost Classifier'],
     'Accuracy': [logistic_accuracy, xgb_precision_accuracy],
@@ -416,6 +448,8 @@ plt.close()
 
 joblib.dump(best_xgb_model, model_dir / "XGBModel.pkl")
 
+# Save feature order and selected cutoffs: model.predict() alone uses default cutoffs.
+# Logistic regression also needs scaler.pkl; XGBoost takes unscaled features.
 joblib.dump(
     {
         "features":features,
