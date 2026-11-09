@@ -2,8 +2,8 @@
  * Screen 2 – Colour-Coded Passage (requirement: results display).
  * Every analysed sentence is shaded by its own AI score; click one to see why.
  */
-import { useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { Box, ButtonBase, Paper, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { bandFor } from '../lib/scoring.js';
 import { likelihood } from '../theme.js';
@@ -11,11 +11,24 @@ import { Legend, ScoreBadge } from '../components/Likelihood.jsx';
 import SentenceDialog from '../components/SentenceDialog.jsx';
 
 export default function PassagePage() {
-  const { result, scores } = useOutletContext();
+  const { entry, result, scores } = useOutletContext();
+  const [params] = useSearchParams();
+  const sentenceRefs = useRef(new Map());
+  const requested = params.get('sentence');
+  const target = params.get('analysis') === entry.id && /^\d+$/.test(requested || '')
+    ? Number(requested) : null;
   const [order, setOrder] = useState('text');
   const [selected, setSelected] = useState(null);
 
   const rows = useMemo(() => (order === 'score' ? [...scores].sort((a, b) => b.score - a.score) : scores), [scores, order]);
+
+  useEffect(() => {
+    const button = sentenceRefs.current.get(target);
+    if (button) {
+      button.focus({ preventScroll: true });
+      button.scrollIntoView({ block: 'center', behavior: 'instant' });
+    }
+  }, [target, entry.id]);
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
@@ -47,6 +60,9 @@ export default function PassagePage() {
           return (
             <li key={s.index}>
               <ButtonBase
+                ref={node => { if (node) sentenceRefs.current.set(s.index, node); else sentenceRefs.current.delete(s.index); }}
+                id={`sentence-${s.index}`}
+                aria-current={s.index === target ? 'true' : undefined}
                 onClick={() => setSelected(s)}
                 aria-label={`Sentence ${s.index + 1}, ${Math.round(s.score * 100)}% AI score, ${band.label}. Show details.`}
                 sx={{
@@ -56,6 +72,10 @@ export default function PassagePage() {
                   gap: 1,
                   textAlign: 'left',
                   borderRadius: 1,
+                  outline: s.index === target ? '3px solid' : undefined,
+                  outlineColor: s.index === target ? 'primary.main' : undefined,
+                  outlineOffset: 2,
+                  scrollMarginTop: 100,
                   '&:hover .sentence-text': { filter: 'brightness(0.97)', borderColor: c.main },
                 }}
               >

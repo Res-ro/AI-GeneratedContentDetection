@@ -46,7 +46,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader overline="Settings" title="Settings" />
+      <PageHeader overline="Your workspace" title="Settings" subtitle="Choose your defaults and manage what stays on this device." />
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={3} divider={<Divider />}>
           <Box>

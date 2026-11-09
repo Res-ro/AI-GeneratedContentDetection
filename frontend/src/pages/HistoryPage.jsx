@@ -91,7 +91,7 @@ export default function HistoryPage() {
   return (
     <>
       <PageHeader
-        overline="Screen 4 of 4 (a) · Interactive dashboard"
+        overline="Your workspace"
         title="Analysis History"
         subtitle="Saved in this browser only. Nothing here is sent to the server."
       />
@@ -157,7 +157,7 @@ export default function HistoryPage() {
                 ? 'No analyses yet. Results appear here after you analyse some text.'
                 : 'History is turned off in Settings, so new results are not saved.'}
             </Typography>
-            <Button variant="outlined" component={RouterLink} to="/">
+            <Button variant="outlined" component={RouterLink} to="/analyse">
               Analyse text
             </Button>
           </Box>

@@ -78,22 +78,22 @@ export const HIGH_CONFIDENCE = 0.8;
 
 /** Friendly names for the 12 writing-style features (backend/app/features.py). */
 export const FEATURE_INFO = {
-  word_count: { label: 'Words in sentence', kind: 'count', help: 'How long the sentence is.' },
-  avg_word_length: { label: 'Average word length', kind: 'chars', help: 'Longer words often mean more formal writing.' },
+  word_count: { label: 'Words in sentence', kind: 'count', help: 'Number of alphabetic word tokens in each analysed sentence.' },
+  avg_word_length: { label: 'Average word length', kind: 'chars', help: 'Average number of letters per alphabetic word.' },
   lexical_diversity: { label: 'Vocabulary variety', kind: 'ratio', help: 'Share of words that are different from each other.' },
   stopword_ratio: { label: 'Common words', kind: 'ratio', help: 'Share of words like “the”, “and”, “of”.' },
-  punctuation_ratio: { label: 'Punctuation', kind: 'ratio', help: 'Punctuation marks per token.' },
-  contraction_ratio: { label: 'Contractions', kind: 'ratio', help: 'Words like “don’t” and “I’m”. People use more of these.' },
+  punctuation_ratio: { label: 'Punctuation', kind: 'ratio', help: 'Punctuation characters as a share of all characters, including spaces.' },
+  contraction_ratio: { label: 'Contractions', kind: 'ratio', help: 'Contraction-pattern matches (such as don’t or I’m) per alphabetic word; the extractor matches straight apostrophes.' },
   transition_word_ratio: {
     label: 'Transition words',
     kind: 'ratio',
-    help: '“However”, “furthermore”, “moreover”… AI text uses more of these.',
+    help: 'Share of alphabetic words matching the transition-word list, such as however, furthermore and moreover.',
   },
-  noun_ratio: { label: 'Nouns', kind: 'ratio', help: 'Share of words that are nouns.' },
-  verb_ratio: { label: 'Verbs', kind: 'ratio', help: 'Share of words that are verbs.' },
+  noun_ratio: { label: 'Nouns', kind: 'ratio', help: 'Share of alphabetic words tagged as nouns or proper nouns.' },
+  verb_ratio: { label: 'Verbs', kind: 'ratio', help: 'Share of alphabetic words tagged as verbs or auxiliaries.' },
   adjective_ratio: { label: 'Adjectives', kind: 'ratio', help: 'Share of words that are adjectives.' },
   adverb_ratio: { label: 'Adverbs', kind: 'ratio', help: 'Share of words that are adverbs.' },
-  pronoun_ratio: { label: 'Pronouns', kind: 'ratio', help: '“I”, “she”, “they”… Personal writing uses more of these.' },
+  pronoun_ratio: { label: 'Pronouns', kind: 'ratio', help: 'Share of alphabetic words tagged as pronouns, such as I, she and they.' },
 };
 
 export function formatFeature(name, value) {

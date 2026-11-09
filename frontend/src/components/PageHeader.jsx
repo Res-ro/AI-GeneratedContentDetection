@@ -11,7 +11,7 @@ export default function PageHeader({ overline, title, subtitle, action }) {
     <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap', mb: { xs: 2, sm: 3 } }}>
       <Box sx={{ flex: '1 1 320px', minWidth: 0 }}>
         {overline && (
-          <Typography variant="overline" color="text.secondary" component="p">
+          <Typography variant="overline" color="primary" component="p" sx={{ mb: 0.5 }}>
             {overline}
           </Typography>
         )}

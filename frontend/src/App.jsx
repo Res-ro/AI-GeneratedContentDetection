@@ -1,7 +1,8 @@
 /**
  * App.jsx – the routes (React Router, Week 9).
  *
- *   /                  Screen 1   Paste & Analyse
+ *   /                             Homepage
+ *   /analyse                      Paste & Analyse
  *   /results/passage   Screen 2   Colour-coded passage
  *   /results/summary   Screen 3   Overall score & confidence
  *   /results/feedback  Screen 4b  Rate this result
@@ -11,6 +12,8 @@
  */
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
+import HomePage from './pages/HomePage.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import AnalysePage from './pages/AnalysePage.jsx';
 import ResultsLayout from './pages/ResultsLayout.jsx';
 import PassagePage from './pages/PassagePage.jsx';
@@ -28,8 +31,9 @@ function CrashTest() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
       <Route element={<AppShell />}>
-        <Route index element={<AnalysePage />} />
+        <Route path="analyse" element={<AnalysePage />} />
         <Route path="results" element={<ResultsLayout />}>
           <Route index element={<Navigate to="passage" replace />} />
           <Route path="passage" element={<PassagePage />} />

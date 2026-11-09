@@ -62,6 +62,8 @@ export function ScoreBadge({ score, variant = 'outlined', sx }) {
       component="span"
       title={`${pct(score)} AI score: ${band.label}`}
       sx={{
+        // Keep the absolute screen-reader label inside this badge's scroll container.
+        position: 'relative',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',

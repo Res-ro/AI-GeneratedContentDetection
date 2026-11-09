@@ -13,14 +13,14 @@ import { sentenceScores } from '../lib/scoring.js';
 import PageHeader from '../components/PageHeader.jsx';
 
 const TABS = [
-  { to: '/results/passage', label: 'Passage', overline: 'Screen 2 of 4 · Results display', title: 'Colour-Coded Passage' },
+  { to: '/results/passage', label: 'Passage', overline: 'Sentence-level insights', title: 'Colour-Coded Passage' },
   {
     to: '/results/summary',
     label: 'Summary',
-    overline: 'Screen 3 of 4 · Interactive dashboard',
+    overline: 'Analysis overview',
     title: 'Overall Score & Confidence',
   },
-  { to: '/results/feedback', label: 'Feedback', overline: 'Screen 4 of 4 (b) · Feedback', title: 'Rate This Result' },
+  { to: '/results/feedback', label: 'Feedback', overline: 'Your perspective', title: 'Rate This Result' },
 ];
 
 const MODEL_LABEL = { xgboost: 'XGBoost', logistic: 'Logistic regression' };
@@ -46,7 +46,7 @@ export default function ResultsLayout() {
             Analyse some text first, or open an earlier result from History.
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'center' }}>
-            <Button variant="contained" component={RouterLink} to="/" startIcon={<ScanText size={16} aria-hidden />}>
+            <Button variant="contained" component={RouterLink} to="/analyse" startIcon={<ScanText size={16} aria-hidden />}>
               Analyse text
             </Button>
             <Button variant="outlined" component={RouterLink} to="/history">
@@ -70,7 +70,7 @@ export default function ResultsLayout() {
             variant="outlined"
             className="no-print"
             startIcon={<RotateCcw size={16} aria-hidden />}
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/analyse')}
           >
             Edit &amp; re-analyse
           </Button>
@@ -80,7 +80,7 @@ export default function ResultsLayout() {
       <Paper variant="outlined" sx={{ mb: 2, overflow: 'hidden' }}>
         <Box sx={{ px: { xs: 2, sm: 3 }, pt: 1.5, pb: 0.5 }}>
           <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-            <strong style={{ color: '#222' }}>{current.name}</strong> · {MODEL_LABEL[result.model] || result.model} ·{' '}
+            <Box component="strong" sx={{ color: 'text.primary' }}>{current.name}</Box> · {MODEL_LABEL[result.model] || result.model} ·{' '}
             {new Date(current.createdAt).toLocaleString()}
           </Typography>
         </Box>

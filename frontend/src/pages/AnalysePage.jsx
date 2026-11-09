@@ -176,7 +176,7 @@ export default function AnalysePage() {
 
   return (
     <>
-      <PageHeader overline="Screen 1 of 4 · Analyse" title="Paste & Analyse" />
+      <PageHeader overline="Text analysis" title="Paste & Analyse" subtitle="A closer look at the patterns in your writing." />
 
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
         <Typography variant="h3" component="h2">
@@ -231,7 +231,7 @@ export default function AnalysePage() {
           </Typography>
         </Stack>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' }, mt: 2.5 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} useFlexGap sx={{ alignItems: { sm: 'center' }, flexWrap: 'wrap', mt: 2.5 }}>
           <input ref={fileInputRef} type="file" accept={ACCEPTED} hidden onChange={handleFile} />
           <Button
             variant="outlined"

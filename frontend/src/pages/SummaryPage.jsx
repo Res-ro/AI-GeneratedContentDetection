@@ -1,14 +1,18 @@
 /**
  * Screen 3 – Overall Score & Confidence (requirement: interactive dashboard).
  */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Box, Button, Grid, Paper, Stack, Typography } from '@mui/material';
 import { FileDown } from 'lucide-react';
-import { HIGH_CONFIDENCE, bandFor, binIndex, confidenceRange, distribution, overallLabel, pct } from '../lib/scoring.js';
+import { HIGH_CONFIDENCE, bandFor, confidenceRange, overallLabel, pct } from '../lib/scoring.js';
 import { likelihood } from '../theme.js';
-import DistributionChart from '../components/DistributionChart.jsx';
-import { Legend, ScoreBadge } from '../components/Likelihood.jsx';
+import ClassificationDonut from '../components/ClassificationDonut.jsx';
+import SentenceProgression from '../components/SentenceProgression.jsx';
+import SentenceRanking from '../components/SentenceRanking.jsx';
+import WritingStyleChart from '../components/WritingStyleChart.jsx';
+import { validSentences } from '../lib/dashboard.js';
+import { Legend } from '../components/Likelihood.jsx';
 
 function Stat({ value, label }) {
   return (
@@ -24,22 +28,19 @@ function Stat({ value, label }) {
 }
 
 export default function SummaryPage() {
-  const { entry, result, scores } = useOutletContext();
-  const [selectedBin, setSelectedBin] = useState(null);
+  const { entry, result, scores: rawScores } = useOutletContext();
+  const scores = useMemo(() => validSentences(rawScores), [rawScores]);
 
-  const { range, bins, highFlags } = useMemo(() => {
+  const { range, highFlags } = useMemo(() => {
     const values = scores.map((s) => s.score);
     return {
       range: confidenceRange(values),
-      bins: distribution(values),
       highFlags: values.filter((v) => v >= HIGH_CONFIDENCE).length,
     };
   }, [scores]);
 
   const band = bandFor(result.ai_score);
   const c = likelihood[band.key];
-  const bin = bins.find((b) => b.label === selectedBin);
-  const binSentences = bin ? scores.filter((s) => binIndex(s.score) === bin.index) : [];
 
   return (
     <>
@@ -109,8 +110,7 @@ export default function SummaryPage() {
                 </>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Only one sentence was long enough to analyse, so there is no confidence range. Add more text for a firmer
-                  result.
+                  At least two valid sentence scores are needed to show a confidence range.
                 </Typography>
               )}
 
@@ -129,7 +129,7 @@ export default function SummaryPage() {
               startIcon={<FileDown size={18} aria-hidden />}
               onClick={() => window.print()}
               className="no-print"
-              sx={{ mt: 2.5, bgcolor: c.text, '&:hover': { bgcolor: '#222' } }}
+              sx={{ mt: 2.5 }}
             >
               Export Report (PDF)
             </Button>
@@ -140,12 +140,12 @@ export default function SummaryPage() {
         <Grid size={{ xs: 12, md: 7 }}>
           <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
             <Typography variant="h4" component="h2">
-              Sentence Score Distribution
+              Sentence Classifications
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }} className="no-print">
-              Select a bar to list the sentences in that range.
+              Select a category to inspect its sentences.
             </Typography>
-            <DistributionChart bins={bins} selected={selectedBin} onSelect={setSelectedBin} />
+            <ClassificationDonut key={entry.id} scores={scores} entryId={entry.id} />
 
             <Stack direction="row" useFlexGap spacing={{ xs: 3, sm: 5 }} sx={{ flexWrap: 'wrap', mt: 2 }}>
               <Stat value={result.sentence_count} label="Sentences analysed" />
@@ -153,31 +153,31 @@ export default function SummaryPage() {
               <Stat value={result.word_count.toLocaleString()} label="Words analysed" />
               <Stat value={`${pct(result.ai_sentence_ratio)}`} label="Sentences flagged AI" />
             </Stack>
+            <Typography variant="caption" component="p" color="text.secondary" sx={{ mt: 1.5 }}>
+              “Flagged AI” uses the model's decision threshold (50% on the re-centred scale). The donut's AI-likely category starts at 65%.
+            </Typography>
           </Paper>
         </Grid>
       </Grid>
 
-      {bin && (
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mt: 2 }} className="no-print">
-          <Typography variant="h4" component="h2" sx={{ mb: 1.5 }}>
-            Sentences scoring {bin.label} ({binSentences.length})
-          </Typography>
-          {binSentences.length === 0 ? (
-            <Typography color="text.secondary">No sentences in this range.</Typography>
-          ) : (
-            <Stack spacing={1}>
-              {binSentences.map((s) => (
-                <Stack key={s.index} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                  <ScoreBadge score={s.score} variant="filled" />
-                  <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                    {s.text}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-          )}
-        </Paper>
-      )}
+      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mt: 2, breakInside: 'avoid' }}>
+        <Typography variant="h3" component="h2" sx={{ mb: 1 }}>Sentence Progression</Typography>
+        <SentenceProgression key={entry.id} scores={scores} entryId={entry.id} />
+      </Paper>
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
+            <Typography variant="h3" component="h2" sx={{ mb: 1 }}>Top Five AI-Likely Sentences</Typography>
+            <SentenceRanking key={entry.id} scores={scores} entryId={entry.id} />
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
+            <Typography variant="h3" component="h2" sx={{ mb: 1 }}>Writing Style Analysis</Typography>
+            <WritingStyleChart key={entry.id} result={result} />
+          </Paper>
+        </Grid>
+      </Grid>
 
       {/* Printed report only: the full passage under the summary */}
       <Box className="print-only" sx={{ mt: 3 }}>

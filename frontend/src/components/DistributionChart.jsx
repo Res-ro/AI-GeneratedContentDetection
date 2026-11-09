@@ -9,7 +9,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { scaleBand, scaleLinear } from 'd3';
 import { Box, Tooltip } from '@mui/material';
 import { bandFor } from '../lib/scoring.js';
-import { likelihood } from '../theme.js';
+import { chrome, likelihood } from '../theme.js';
 
 function useWidth(ref) {
   const [width, setWidth] = useState(0);
@@ -41,7 +41,7 @@ export default function DistributionChart({ bins, selected, onSelect, height = 2
       {width > 0 && (
         <svg width={width} height={height} role="group" aria-label="Number of sentences in each AI-score range">
           <g transform={`translate(${margin.left},${margin.top})`}>
-            <line x1={0} x2={innerW} y1={innerH} y2={innerH} stroke="#cfcfcf" />
+            <line x1={0} x2={innerW} y1={innerH} y2={innerH} stroke={chrome.border} />
             {bins.map((b) => {
               const band = bandFor((b.lo + b.hi) / 2);
               const colour = likelihood[band.key].main;
@@ -75,7 +75,7 @@ export default function DistributionChart({ bins, selected, onSelect, height = 2
                       fill={colour}
                       opacity={dimmed ? 0.3 : 1}
                       rx={2}
-                      stroke={isSelected ? '#222' : 'none'}
+                      stroke={isSelected ? chrome.deep : 'none'}
                       strokeWidth={2}
                     />
                     <text
@@ -84,11 +84,11 @@ export default function DistributionChart({ bins, selected, onSelect, height = 2
                       textAnchor="middle"
                       fontSize={13}
                       fontWeight={700}
-                      fill="#333"
+                      fill={chrome.deep}
                     >
                       {b.count}
                     </text>
-                    <text x={x(b.label) + x.bandwidth() / 2} y={innerH + 18} textAnchor="middle" fontSize={11.5} fill="#666">
+                    <text x={x(b.label) + x.bandwidth() / 2} y={innerH + 18} textAnchor="middle" fontSize={11.5} fill={chrome.mid}>
                       {b.label}
                     </text>
                   </g>
@@ -98,7 +98,7 @@ export default function DistributionChart({ bins, selected, onSelect, height = 2
           </g>
         </svg>
       )}
-      <style>{`.chart-bar:focus-visible rect:last-of-type { stroke: #1a73e8; stroke-width: 3px; }`}</style>
+      <style>{`.chart-bar:focus-visible rect:last-of-type { stroke: var(--brand-focus); stroke-width: 3px; }`}</style>
     </Box>
   );
 }

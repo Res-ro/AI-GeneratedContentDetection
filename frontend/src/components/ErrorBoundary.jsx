@@ -35,7 +35,7 @@ export default class ErrorBoundary extends Component {
           <Button variant="contained" onClick={() => window.location.reload()}>
             Reload page
           </Button>
-          <Button variant="outlined" href="/">
+          <Button variant="outlined" href="/analyse">
             Go to Analyse
           </Button>
         </Stack>

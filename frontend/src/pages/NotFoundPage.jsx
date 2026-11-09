@@ -16,7 +16,7 @@ export default function NotFoundPage() {
           Check the address, or use one of the links below.
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'center' }}>
-          <Button variant="contained" component={RouterLink} to="/">
+          <Button variant="contained" component={RouterLink} to="/analyse">
             Analyse text
           </Button>
           <Button variant="outlined" component={RouterLink} to="/history">

@@ -64,7 +64,7 @@ export default function FeedbackPage() {
               key={s.index}
               direction={{ xs: 'column', sm: 'row' }}
               spacing={1.5}
-              sx={{ alignItems: { sm: 'center' }, bgcolor: '#f2f2f2', borderRadius: 1, px: 2, py: 1.5 }}
+              sx={{ alignItems: { sm: 'center' }, bgcolor: 'background.default', borderRadius: 1, px: 2, py: 1.5 }}
             >
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography

@@ -2,7 +2,7 @@
 
 React front end for the FastAPI back end in `../backend`. Built with the stack from the Week 8–9 lectures:
 **React 19 + Vite**, **Material UI** (layout, Grid, breakpoints, AppBar), **React Router** (pages) and **D3** (chart scales).
-The look follows the group's prototype design deck (dark chrome, green / amber / red likelihood scale, Cambria headings, Calibri body).
+The interface uses navy headings, indigo controls, lavender accents, and system sans-serif typography. The green / amber / red likelihood scale remains separate from the brand colours.
 
 ## Run it
 
@@ -37,9 +37,10 @@ If the back end is somewhere else, copy `.env.example` to `.env.local` and chang
 
 | Route | Design screen | Requirement |
 | --- | --- | --- |
-| `/` | 1 Paste & Analyse | User input interface: paste or upload (.txt / .docx), live word and character count, model choice, Analyse disabled until the text is valid, status strip, Cancel, Undo after Clear |
+| `/` | Homepage | Introduction, feature overview, how it works, and probabilistic-results disclaimer; no workspace sidebar |
+| `/analyse` | Paste & Analyse | User input interface: paste or upload (.txt / .docx), live word and character count, model choice, Analyse disabled until the text is valid, status strip, Cancel, Undo after Clear |
 | `/results/passage` | 2 Colour-Coded Passage | Results display: each sentence shaded by its score; click one to see its 12 writing-style signals |
-| `/results/summary` | 3 Overall Score & Confidence | Interactive dashboard: overall %, confidence range, clickable distribution chart, Export Report (PDF) via the print dialog |
+| `/results/summary` | Overall Score & Confidence | Overall score, confidence range, classification donut, sentence progression, top-five ranking, grouped writing-style charts, and PDF export |
 | `/history` | 4a Analysis History | Interactive dashboard: filter by score / date / file type, open, delete (with confirm), export CSV |
 | `/results/feedback` | 4b Rate This Result | Feedback: thumbs up/down per sentence, 1–5 stars, optional comment |
 | `/settings` | – | Default model, history on/off, clear saved data, server status and limits |
@@ -90,3 +91,16 @@ If the back end is somewhere else, copy `.env.example` to `.env.local` and chang
 - History and feedback are per browser: they don't sync between devices, and the feedback isn't used to retrain the model yet.
 - "Export Report (PDF)" uses the browser's print dialog (choose "Save as PDF") rather than generating a PDF file.
 - Only `.txt` and `.docx` uploads; other formats need copy and paste.
+
+## Results dashboard
+
+The summary uses the existing re-centred sentence scores; it does not run inference again.
+
+- The donut groups valid scores below 35%, from 35% to below 65%, and at least 65%. Select a segment or legend entry to list sentences; select it again to clear. Percentages describe sentence categories, not verified authorship.
+- The progression chart keeps every valid sentence in document order. Dense charts scroll horizontally. Tab to a point, use arrow keys (or Home/End) to move, and Enter/Space to expand its sentence.
+- The ranking lists up to five highest scores, with original analysed-sentence numbers distinct from ranks. Ties use sentence order.
+- Both charts link to Passage using analysis ID and zero-based sentence index in the query string. The matching sentence is focused, scrolled into view, and highlighted; stale links for another analysis are ignored. Numbering excludes skipped sentences because the API does not provide their original positions.
+- Writing-style groups use `feature_means`. Ratios use 0?100% axes; word counts and word lengths have separately labelled axes whose upper bounds come from observed sentence values. Missing values display ?Not available?. These are descriptive measurements, not per-prediction attributions or reference-population comparisons.
+- PDF output includes all writing-style groups and the full sentence list. The dense progression chart scales to the printed page.
+
+Run dashboard data checks with `node --test src/lib/dashboard.test.js`, then `npm run build`. Browser verification used fixture API responses at 320, 390, 768, and 1440px, including keyboard controls, Passage links, empty/single/200-sentence inputs, and PDF generation. Live inference was not retested for these frontend changes.

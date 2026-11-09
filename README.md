@@ -23,7 +23,7 @@ python -m spacy download en_core_web_sm
 | joblib | Save models, scalers, and prediction metadata |
 | numpy | Calculate cumulative PCA explained variance |
 
-The scripts also use `re`, `string`, and `pathlib`, which are included with Python. Data processing downloads NLTK's `punkt` and `punkt_tab` resources automatically, so internet access is needed for the first download.
+Note: Data processing downloads NLTK's `punkt` and `punkt_tab` resources automatically, so internet access is needed for the first download.
 
 ## Run data processing
 
@@ -35,13 +35,12 @@ Place the source dataset at `data/rawdata.csv`. It must contain these columns:
 | `label` | Numeric class label: `0` for human, `1` for AI-generated |
 | `prompt_name`, `source`, `RDizzl3_seven` | Metadata columns required by the current script; their values are discarded |
 
-Use a dataset with both classes and enough documents per class for stratified splitting. Run:
+Run:
 
 ```powershell
 python DataProcessing.py
 ```
 
-The script removes missing, blank, and duplicate documents, then splits documents into 70% training, 15% test, and 15% validation sets. Splitting before sentence extraction keeps sentences from the same document in one set. It retains sentences with at least 10 whitespace-separated words and extracts 12 numerical writing-style features using spaCy.
 
 Outputs:
 
@@ -51,13 +50,12 @@ Outputs:
 
 ## Run model evaluation
 
-Run data processing first, or use existing sentence CSVs with the same columns and all 12 features listed in `ModelEvaluation.py`. The training set must support five document-grouped cross-validation folds and K-Means clustering with up to six AI clusters. Validation and test sets must contain both labels for ROC-AUC evaluation.
+Run data processing first, or use existing sentence CSVs with the same columns and all 12 features listed in `ModelEvaluation.py`. Run using:
 
 ```powershell
 python ModelEvaluation.py
 ```
 
-The script trains and tunes logistic regression, explores AI sentence clusters with K-Means and PCA, and tunes an XGBoost classifier. It uses validation data to select prediction thresholds and reports held-out test metrics, including accuracy, precision, recall, F1, ROC-AUC, and average precision (labelled PR-AUC in the output).
 
 Outputs:
 
@@ -65,6 +63,20 @@ Outputs:
 - `model_evaluation/`: confusion matrices, cluster and PCA plots, precision-recall curves, and a model comparison chart.
 - Terminal output: evaluation metrics, selected parameters and thresholds, cluster summaries, and XGBoost feature importance.
 
-The saved metadata contains the feature order, the logistic regression F1-selected threshold, and the XGBoost precision-selected threshold. The final comparison chart uses these thresholds. For later predictions, apply the saved thresholds to class-1 probabilities; logistic regression also requires the saved scaler, while XGBoost uses unscaled features.
+## Export saved-model predictions
 
-Both scripts save plots directly to files without opening chart windows. Rerunning them overwrites their corresponding outputs. Evaluation can take substantial time and memory: XGBoost searches 75 parameter combinations across five folds using all available CPU workers, and K-Means silhouette scoring uses the full AI training subset.
+Run this separate script using the existing processed datasets and saved models:
+
+```powershell
+python ExportModelPredictions.py
+```
+
+It saves `data_visualisations/model_predictions.csv`, combining training, validation, and test sentences. All original columns (features, `doc_ID`, `label`, sentence text, and any other metadata) are preserved, with three added columns:
+
+- `split`: `Training`, `Validation`, or `Test`.
+- `logistic_ai_probability`: logistic regression's estimated probability of AI-generated text.
+- `xgboost_ai_probability`: XGBoost's estimated probability of AI-generated text.
+
+Both probabilities range from 0 to 1 without thresholds or explicit rounding. The script reuses the saved scaler for logistic regression and unscaled features for XGBoost, in the saved feature order. It does not retrain models. Training estimates are in-sample; keep splits separate when assessing performance.
+
+Use `--data-dir`, `--model-dir`, or `--output` to override the defaults. Reruns overwrite the output CSV. `DataVisualisation.py` remains a separate script for exploratory charts and summaries.

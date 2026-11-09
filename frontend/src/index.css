@@ -9,12 +9,48 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid #1a73e8;
+  outline: 3px solid var(--brand-focus);
   outline-offset: 2px;
 }
 
 .print-only {
   display: none;
+}
+
+.dashboard-segment:focus-visible {
+  outline: none;
+  stroke: var(--brand-focus);
+  stroke-width: 5px;
+}
+
+.progression-point:focus-visible {
+  outline: none;
+}
+
+.progression-point:focus-visible .point-dot {
+  stroke: var(--brand-focus);
+  stroke-width: 4px;
+  r: 7px;
+}
+
+.skip-link {
+  position: fixed;
+  left: 12px;
+  top: -100px;
+  z-index: 2000;
+  background: var(--brand-paper);
+  color: var(--brand-ink);
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+.skip-link:focus {
+  top: 10px;
+}
+
+/* A light focus ring remains visible on the navy navigation and hero. */
+.on-dark :focus-visible, .on-dark .Mui-focusVisible {
+  outline-color: var(--brand-paper);
 }
 
 /* "Export Report (PDF)" uses the browser's print dialog -> Save as PDF. */
@@ -34,6 +70,13 @@ body {
   }
   main {
     padding: 0 !important;
+  }
+  .progression-scroll {
+    overflow: visible !important;
+  }
+  .progression-scroll svg {
+    min-width: 0 !important;
+    height: auto !important;
   }
 }
 
