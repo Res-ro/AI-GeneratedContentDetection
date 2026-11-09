@@ -115,6 +115,10 @@ async function request(path, { method = 'GET', body, signal, timeoutMs = DEFAULT
 }
 
 export const api = {
+  performanceStatus: (opts) => request('/api/model-performance/status', opts),
+  performanceSummary: (params, opts) => request(`/api/model-performance/summary?${new URLSearchParams(params)}`, opts),
+  performanceRecords: (params, opts) => request(`/api/model-performance/records?${new URLSearchParams(params)}`, opts),
+  performanceDocument: (id, page, opts) => request(`/api/model-performance/documents/${encodeURIComponent(id)}?page=${page}`, opts),
   health: (opts) => request('/api/health', { timeoutMs: 5000, ...opts }),
   modelInfo: (opts) => request('/api/model-info', { timeoutMs: 8000, ...opts }),
   analyze: (text, model, opts) => request('/api/analyze', { method: 'POST', body: { text, model }, ...opts }),

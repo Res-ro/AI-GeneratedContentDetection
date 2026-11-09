@@ -23,6 +23,7 @@ from app.errors import InvalidTextError, ServiceBusyError
 from app.features import FEATURE_ORDER, ensure_nltk_data, extract_features, split_sentences
 from app.integrity import load_checksums, load_verified
 from app.sanitise import normalise_text
+from app.score_math import recentre as _recentre
 from app.schemas import AnalyzeResponse, ModelDescription, ModelInfoResponse, Limits, SentenceResult
 
 logger = logging.getLogger("aidetect.model")
@@ -41,22 +42,6 @@ class _Bundle:
     kmeans: Any
     kmeans_scaler: Any
     thresholds: dict[str, float]
-
-
-def _recentre(probabilities: np.ndarray, threshold: float) -> np.ndarray:
-    """Map probabilities so that the model's own threshold becomes 0.5.
-
-    The saved thresholds (0.4 and 0.9) differ, so a raw 0.6 means "AI" to one
-    model and "human" to the other. Re-centring makes scores comparable and
-    makes "0.5 = on the fence" true for every model. Piecewise linear:
-    [0, t] -> [0, 0.5] and [t, 1] -> [0.5, 1].
-    """
-    t = min(max(threshold, 1e-6), 1 - 1e-6)
-    return np.where(
-        probabilities < t,
-        probabilities / (2 * t),
-        0.5 + (probabilities - t) / (2 * (1 - t)),
-    )
 
 
 class ModelService:

@@ -17,7 +17,7 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
-import { ChartColumn, History, ScanText, Settings } from 'lucide-react';
+import { ChartColumn, History, ScanText, Settings, ChartNoAxesCombined } from 'lucide-react';
 import { chrome } from '../theme.js';
 import ErrorBoundary from './ErrorBoundary.jsx';
 import AppHeader from './AppHeader.jsx';
@@ -25,6 +25,7 @@ import AppHeader from './AppHeader.jsx';
 const NAV = [
   { to: '/analyse', label: 'Analyse', icon: ScanText, match: (p) => p === '/analyse' },
   { to: '/results/passage', label: 'Results', icon: ChartColumn, match: (p) => p.startsWith('/results') },
+  { to: '/model-performance', label: 'Model Performance', mobileLabel: 'Models', icon: ChartNoAxesCombined, match: (p) => p.startsWith('/model-performance') },
   { to: '/history', label: 'History', icon: History, match: (p) => p.startsWith('/history') },
   { to: '/settings', label: 'Settings', icon: Settings, match: (p) => p.startsWith('/settings') },
 ];
@@ -119,8 +120,8 @@ export default function AppShell() {
           value={activeIndex === -1 ? false : activeIndex}
           onChange={(_, i) => navigate(NAV[i].to)}
         >
-          {NAV.map(({ to, label, icon: Icon }, i) => (
-            <BottomNavigationAction key={to} label={label} aria-current={i === activeIndex ? 'page' : undefined} icon={<Icon size={20} aria-hidden />} />
+          {NAV.map(({ to, label, mobileLabel, icon: Icon }, i) => (
+            <BottomNavigationAction key={to} label={mobileLabel || label} aria-label={label} aria-current={i === activeIndex ? 'page' : undefined} icon={<Icon size={20} aria-hidden />} />
           ))}
         </BottomNavigation>
       </Paper>

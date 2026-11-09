@@ -68,6 +68,7 @@ export default function HomePage() {
             '& .MuiButton-outlined:hover': { bgcolor: chrome.primary, borderColor: chrome.primary } }}>
             <Button href="#how-it-works" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>How it works</Button>
             <Button component={RouterLink} to="/history">History</Button>
+            <Button component={RouterLink} to="/model-performance">Model Performance</Button>
             <Button component={RouterLink} to="/analyse" variant="outlined" sx={{ borderColor: chrome.accent }}>Analyse text</Button>
           </Stack>
       </AppHeader>

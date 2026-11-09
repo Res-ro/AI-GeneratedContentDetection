@@ -80,3 +80,76 @@ It saves `data_visualisations/model_predictions.csv`, combining training, valida
 Both probabilities range from 0 to 1 without thresholds or explicit rounding. The script reuses the saved scaler for logistic regression and unscaled features for XGBoost, in the saved feature order. It does not retrain models. Training estimates are in-sample; keep splits separate when assessing performance.
 
 Use `--data-dir`, `--model-dir`, or `--output` to override the defaults. Reruns overwrite the output CSV. `DataVisualisation.py` remains a separate script for exploratory charts and summaries.
+
+## Model Performance and Dataset Explorer
+
+Open `/model-performance` from the sidebar, the mobile **Models** button, or the homepage. This is separate from individual analysis results. It offers:
+
+- **Overview:** split/model/evaluation-level controls, metrics, clickable confusion matrices and score distributions by actual label. Defaults to Test, XGBoost, Document.
+- **Dataset Explorer:** combined label/prediction/outcome/agreement/score filters, document-ID and sentence-word search, sortable pages, and document inspection with both models, sentence progression, raw probabilities and writing-style features.
+- **Model Comparison:** both models on the identical split and level, grouped metric bars, matrices and clickable agreement groups.
+
+### Import and run locally
+
+Generate `data_visualisations/model_predictions.csv` with `ExportModelPredictions.py` first. Use the **same model generation** as `backend/Models/metadata.pkl`; the importer verifies that metadata against `backend/model_checksums.json`. A CSV does not itself prove which model generation produced it. If you retrain, regenerate the export and update the backend models/checksums together before importing.
+
+From the repository root, in **Git Bash**:
+
+```bash
+cd backend
+./.venv/Scripts/python.exe scripts/import_model_performance.py
+export AIDETECT_PERFORMANCE_ENABLED=true
+./.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-server-header
+```
+
+Or in **PowerShell**:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts/import_model_performance.py
+$env:AIDETECT_PERFORMANCE_ENABLED = "true"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-server-header
+```
+
+Start the frontend in another terminal with `cd frontend` then `npm run dev`; visit `http://localhost:5173/model-performance`. You may instead set `AIDETECT_PERFORMANCE_ENABLED=true` in the ignored `backend/.env` and restart the backend. Access defaults to **disabled**, even if a database is present. Keep this disabled on public deployments unless you have confirmed permission to distribute the dataset text and arranged appropriate access controls; this API has no user accounts. The commands above bind the API to loopback only.
+
+The import command supports `--csv PATH` and `--output PATH`. For a custom database location, set `AIDETECT_PERFORMANCE_DB` to that same absolute path. Re-import after changing the export or saved metadata. Stop the server before replacing an open database on Windows. Imports are atomic: validation failures preserve the previous database. Missing, disabled, unreadable or metadata-mismatched datasets show an unavailable state rather than substitute results.
+
+### Data and scoring
+
+The importer streams and validates IDs, labels, split membership, probabilities and all 12 features. It rejects missing/non-finite/out-of-range probabilities, negative/non-finite features, inconsistent document labels, IDs shared across splits, and differing values for the same sentence text within a document. Identical repeated rows are **preserved and counted**, not deduplicated, because there are no original sentence IDs to distinguish genuine repetition from an export duplicate. Positions follow CSV order within each document.
+
+The current local export contains 781,485 retained sentences across 44,862 documents, including 2,355 identical repeated rows. Counts are recomputed on each import. The generated SQLite snapshot is approximately 826 MiB for this export (including indexes and full-text search), and is ignored by Git. Importing takes several minutes and requires room for a temporary snapshot as well as any previous database. No dataset is bundled into frontend assets.
+
+For each model's saved threshold `t`, raw probability `p` becomes `p/(2*t)` below `t`, or `0.5 + (p-t)/(2*(1-t))` otherwise. This is the **same shared function as live inference**. A document score is the mean of its retained sentence scores; a score at least 0.5 predicts AI. Each document counts once in document-level metrics. Sentence flags compare raw probabilities against the saved threshold. The UI distinguishes raw probabilities, re-centred scores, supplied labels, predictions and correctness. Re-centred scores are not calibrated authorship probabilities.
+
+AI is the positive class. Undefined metrics are returned as null and shown as “Not defined”; zero remains zero. ROC-AUC needs both classes; average precision needs at least one positive label. Both use continuous scores. Matrix percentages use **all examples in the selected split and level** as the denominator. Histogram bins include their lower boundary and exclude their upper boundary, except the final bin includes 1. Agreement means identical binary predictions; “both incorrect” therefore also counts as agreement.
+
+Test results are held-out; Training is in-sample; Validation was used in selection. All splits combined are not an independent generalisation estimate. Labels are supplied ground truth, not independently verified authorship, and results may differ on unseen writing. Preprocessing removed short sentences, so document inspection shows retained analysed sentences, not necessarily the entire original document. Repeated rows contribute to sentence metrics and document averages.
+
+### Architecture and API
+
+`backend/scripts/import_model_performance.py` builds `backend/data/model_performance.sqlite3`, with indexed sentence/document records, full-text search, source/metadata fingerprints, import information and cached split/level summaries. Requests only query saved predictions; they do not run inference. The database is opened read-only per query. Search matches document-ID substrings or sentence word prefixes; multiple text words must occur in one sentence. IDs sort alphabetically. Results are capped at 100 rows per request; document text/features are paginated. Previous/next document buttons navigate the current results page; closing preserves filters and pagination. Numeric sentence progression covers all retained sentences in that document.
+
+All endpoints are under `/api/model-performance`:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /status` | Availability and validated import provenance; no text when disabled |
+| `GET /summary?split=Test&level=document` | Cached metrics, matrices, histograms and agreement for both models |
+| `GET /records` | Validated combined filters, stable sort, bounded pagination |
+| `GET /documents/{document_id}?page=1` | Both document predictions, sentence page with features, numeric progression |
+
+Explorer filters are retained in the URL. Matrix/agreement clicks preserve split and level, select the relevant model, and clear old explorer filters so the count matches the selected group. Overview/comparison metrics cover the selected split and level, not additional explorer filters. No confidence intervals or feature-attribution/SHAP claims are provided.
+
+### Verification
+
+```bash
+# From backend, with requirements-dev.txt installed:
+./.venv/Scripts/python.exe -m pytest -q
+# From frontend:
+node --test src/lib/dashboard.test.js src/lib/performance.test.js
+npm run build
+```
+
+Focused tests cover CSV validation, repetitions/conflicts, atomic imports, metadata mismatch and opt-in access, shared thresholds, document aggregation, sentence/document counts, metrics and undefined values, combined search/filters, model disagreements, sorting/pagination and matrix-to-explorer URL state. Existing analysis API and dashboard tests remain part of verification.

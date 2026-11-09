@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     # --- Model files ---------------------------------------------------------
     models_dir: Path = BACKEND_ROOT / "Models"
+    performance_enabled: bool = False
+    performance_db: Path = BACKEND_ROOT / "data" / "model_performance.sqlite3"
     # SHA-256 of every .pkl, committed to git. The server refuses to start if a
     # model file does not match (pickle files can run code when loaded).
     checksums_file: Path = BACKEND_ROOT / "model_checksums.json"

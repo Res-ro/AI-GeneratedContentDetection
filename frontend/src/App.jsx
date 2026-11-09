@@ -21,6 +21,7 @@ import SummaryPage from './pages/SummaryPage.jsx';
 import FeedbackPage from './pages/FeedbackPage.jsx';
 import HistoryPage from './pages/HistoryPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import ModelPerformancePage from './pages/ModelPerformancePage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
 function CrashTest() {
@@ -42,6 +43,7 @@ export default function App() {
         </Route>
         <Route path="history" element={<HistoryPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="model-performance" element={<ModelPerformancePage />} />
         {import.meta.env.DEV && <Route path="crash-test" element={<CrashTest />} />}
         <Route path="*" element={<NotFoundPage />} />
       </Route>

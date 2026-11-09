@@ -12,6 +12,7 @@ from app.middleware import install_middleware
 from app.model_service import ModelService
 from app.rate_limit import SlidingWindowRateLimiter
 from app.routes import router
+from app.performance_routes import router as performance_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -55,3 +56,4 @@ app = FastAPI(
 register_exception_handlers(app)
 install_middleware(app, settings)
 app.include_router(router)
+app.include_router(performance_router)
