@@ -3,9 +3,9 @@ A group project developed for COS30049 – Computing Technology Innovation Proje
 
 ## Run the application
 
-Use **64-bit Python 3.12** and **Node.js 20.19.x or >=22.12.0**. The committed classifiers are ready to use; running the app does not require retraining or replacing models.
+Use **64-bit Python 3.12** and **Node.js 20.19.x or >=22.12.0**. The committed classifiers are ready to use and running the app does not require retraining or replacing models.
 
-Windows also requires the Microsoft Visual C++ Redistributable (x64 for a 64-bit x86 Python installation); see the [backend prerequisites](backend/README-backend.md#installation-and-startup).
+Windows also requires the Microsoft Visual C++ Redistributable (x64 for a 64-bit x86 Python installation). See the [backend prerequisites](backend/README-backend.md#installation-and-startup).
 
 From the repository root, **Windows PowerShell**, terminal 1:
 
@@ -61,11 +61,11 @@ The live and precomputed flows share the existing score transformation, while re
 - [Harvard references and team AI declaration placeholders](backend/README-backend.md#references-harvard-style). The team must complete the declaration from its actual records.
 - [Dated verification, evidence locations and remaining submission actions](FINALISATION.md).
 
-Both experiment scripts require explicit `--run-local`, use bounded local execution, omit passage text from results and write ignored evidence to `backend/experiments/results/`. No successful result should be claimed without its actual run/configuration. Dataset access is disabled by default; public exposure requires distribution permission and access controls. CORS is not authentication.
+Both experiment scripts require explicit `--run-local`. Dataset access is disabled by default with public exposure requiring distribution permission and access controls.
 
 ## Optional offline data-processing libraries
 
-The following historical workflow is for regenerating datasets/training outputs, **not application installation**. It is not needed for submission startup or the security experiments, and does not change the saved models unless explicitly run.
+The following workflow is for regenerating datasets/training outputs, **not application installation**. 
 
 Run the optional offline commands below from the repository root.
 
@@ -141,7 +141,7 @@ It saves `data_visualisations/model_predictions.csv`, combining training, valida
 - `logistic_ai_probability`: logistic regression's estimated probability of AI-generated text.
 - `xgboost_ai_probability`: XGBoost's estimated probability of AI-generated text.
 
-Both probabilities range from 0 to 1 without thresholds or explicit rounding. The script reuses the saved scaler for logistic regression and unscaled features for XGBoost, in the saved feature order. It does not retrain models. Training estimates are in-sample; keep splits separate when assessing performance.
+Both probabilities range from 0 to 1 without thresholds or explicit rounding. The script reuses the saved scaler for logistic regression and unscaled features for XGBoost, in the saved feature order. It does not retrain models.
 
 Use `--data-dir`, `--model-dir`, or `--output` to override the defaults. Reruns overwrite the output CSV. `DataVisualisation.py` remains a separate script for exploratory charts and summaries.
 
@@ -155,7 +155,7 @@ Open `/model-performance` from the sidebar, the mobile **Models** button, or the
 
 ### Import and run locally
 
-Generate `data_visualisations/model_predictions.csv` with `ExportModelPredictions.py` first. Use the **same model generation** as `backend/Models/metadata.pkl`; the importer verifies that metadata against `backend/model_checksums.json`. A CSV does not itself prove which model generation produced it. If you retrain, regenerate the export and update the backend models/checksums together before importing.
+Generate `data_visualisations/model_predictions.csv` with `ExportModelPredictions.py` first. Use the **same model generation** as `backend/Models/metadata.pkl`, the importer verifies that metadata against `backend/model_checksums.json`. If you retrain, regenerate the export and update the backend models/checksums together before importing.
 
 From the repository root, in **Git Bash**:
 
@@ -175,25 +175,19 @@ $env:AIDETECT_PERFORMANCE_ENABLED = "true"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-server-header
 ```
 
-Start the frontend in another terminal with `cd frontend` then `npm run dev`; visit `http://localhost:5173/model-performance`. You may instead set `AIDETECT_PERFORMANCE_ENABLED=true` in the ignored `backend/.env` and restart the backend. Access defaults to **disabled**, even if a database is present. Keep this disabled on public deployments unless you have confirmed permission to distribute the dataset text and arranged appropriate access controls; this API has no user accounts. The commands above bind the API to loopback only.
+Start the frontend in another terminal with `cd frontend` then `npm run dev`, then visit `http://localhost:5173/model-performance`. You can instead set `AIDETECT_PERFORMANCE_ENABLED=true` in the ignored `backend/.env` and restart the backend. Access defaults to **disabled**, even if a database is present. The commands above bind the API to loopback only.
 
-The import command supports `--csv PATH` and `--output PATH`. For a custom database location, set `AIDETECT_PERFORMANCE_DB` to that same absolute path. Re-import after changing the export or saved metadata. Stop the server before replacing an open database on Windows. Imports are atomic: validation failures preserve the previous database. Missing, disabled, unreadable or metadata-mismatched datasets show an unavailable state rather than substitute results.
+The import command supports `--csv PATH` and `--output PATH`. For a custom database location, set `AIDETECT_PERFORMANCE_DB` to that same absolute path. Re-import after changing the export or saved metadata. Stop the server before replacing an open database on Windows. Missing, disabled, unreadable or metadata-mismatched datasets show an unavailable state rather than substitute results.
 
 ### Data and scoring
 
 The importer streams and validates IDs, labels, split membership, probabilities and all 12 features. It rejects missing/non-finite/out-of-range probabilities, negative/non-finite features, inconsistent document labels, IDs shared across splits, and differing values for the same sentence text within a document. Identical repeated rows are **preserved and counted**, not deduplicated, because there are no original sentence IDs to distinguish genuine repetition from an export duplicate. Positions follow CSV order within each document.
 
-The current local export contains 781,485 retained sentences across 44,862 documents, including 2,355 identical repeated rows. Counts are recomputed on each import. The generated SQLite snapshot is approximately 826 MiB for this export (including indexes and full-text search), and is ignored by Git. Importing takes several minutes and requires room for a temporary snapshot as well as any previous database. No dataset is bundled into frontend assets.
-
-For each model's saved threshold `t`, raw probability `p` becomes `p/(2*t)` below `t`, or `0.5 + (p-t)/(2*(1-t))` otherwise. This is the **same shared function as live inference**. A document score is the mean of its retained sentence scores; a score at least 0.5 predicts AI. Each document counts once in document-level metrics. Sentence flags compare raw probabilities against the saved threshold. The UI distinguishes raw probabilities, re-centred scores, supplied labels, predictions and correctness. Re-centred scores are not calibrated authorship probabilities.
-
-AI is the positive class. Undefined metrics are returned as null and shown as “Not defined”; zero remains zero. ROC-AUC needs both classes; average precision needs at least one positive label. Both use continuous scores. Matrix percentages use **all examples in the selected split and level** as the denominator. Histogram bins include their lower boundary and exclude their upper boundary, except the final bin includes 1. Agreement means identical binary predictions; “both incorrect” therefore also counts as agreement.
-
-Test results are held-out; Training is in-sample; Validation was used in selection. All splits combined are not an independent generalisation estimate. Labels are supplied ground truth, not independently verified authorship, and results may differ on unseen writing. Preprocessing removed short sentences, so document inspection shows retained analysed sentences, not necessarily the entire original document. Repeated rows contribute to sentence metrics and document averages.
+For each model's saved threshold `t`, raw probability `p` becomes `p/(2*t)` below `t`, or `0.5 + (p-t)/(2*(1-t))` otherwise. This is the **same shared function as live inference**. A document score is the mean of its retained sentence scores with a score at least 0.5 predicting AI. Each document counts once in document-level metrics. Sentence flags compare raw probabilities against the saved threshold. The UI distinguishes raw probabilities, re-centred scores, supplied labels, predictions and correctness.
 
 ### Architecture and API
 
-`backend/scripts/import_model_performance.py` builds `backend/data/model_performance.sqlite3`, with indexed sentence/document records, full-text search, source/metadata fingerprints, import information and cached split/level summaries. Requests only query saved predictions; they do not run inference. The database is opened read-only per query. Search matches document-ID substrings or sentence word prefixes; multiple text words must occur in one sentence. IDs sort alphabetically. Results are capped at 100 rows per request; document text/features are paginated. Previous/next document buttons navigate the current results page; closing preserves filters and pagination. Numeric sentence progression covers all retained sentences in that document.
+`backend/scripts/import_model_performance.py` builds `backend/data/model_performance.sqlite3`, with indexed sentence/document records, full-text search, source/metadata fingerprints, import information and cached split/level summaries. Requests only query saved predictions and do not run inference. The database is opened read-only per query. Search matches document-ID substrings or sentence word prefixes. IDs sort alphabetically. Results are capped at 100 rows per request and document text/features are paginated. Previous/next document buttons navigate the current results page, closing preserves filters and pagination. And Numeric sentence progression covers all retained sentences in that document.
 
 All endpoints are under `/api/model-performance`:
 
@@ -204,7 +198,7 @@ All endpoints are under `/api/model-performance`:
 | `GET /records` | Validated combined filters, stable sort, bounded pagination |
 | `GET /documents/{document_id}?page=1` | Both document predictions, sentence page with features, numeric progression |
 
-Explorer filters are retained in the URL. Matrix/agreement clicks preserve split and level, select the relevant model, and clear old explorer filters so the count matches the selected group. Overview/comparison metrics cover the selected split and level, not additional explorer filters. No confidence intervals or feature-attribution/SHAP claims are provided.
+Explorer filters are retained in the URL. Matrix/agreement clicks preserve split and level, select the relevant model, and clear old explorer filters so the count matches the selected group. Overview/comparison metrics cover the selected split and level, not additional explorer filters.
 
 ### Verification
 
@@ -217,3 +211,22 @@ npm run build
 ```
 
 Focused tests cover CSV validation, repetitions/conflicts, atomic imports, metadata mismatch and opt-in access, shared thresholds, document aggregation, sentence/document counts, metrics and undefined values, combined search/filters, model disagreements, sorting/pagination and matrix-to-explorer URL state. Existing analysis API and dashboard tests remain part of verification.
+
+## References
+
+Chen, T. and Guestrin, C. (2016) ‘XGBoost: a scalable tree boosting system’, *Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining*, pp. 785–794. doi:10.1145/2939672.2939785.
+
+Hadley, J. and Pournader, R. (eds.) (2026) *Unicode Technical Standard #39: Unicode security mechanisms*, revision 34. Unicode Consortium. Available at: https://www.unicode.org/reports/tr39/tr39-34.html (Accessed: 9 November 2026).
+
+OWASP Foundation (2023) *API4:2023 Unrestricted Resource Consumption*. Available at: https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/ (Accessed: 8 November 2026).
+
+OWASP Foundation (2021) *OWASP Top 10:2021*. Available at: https://owasp.org/Top10/2021/ (Accessed: 8 November 2026).
+
+Python Packaging Authority (n.d.) *Dependency specifiers*. Available at: https://packaging.python.org/en/latest/specifications/dependency-specifiers/ (Accessed: 8 November 2026).
+
+XGBoost developers (n.d.) *Installation guide*. Available at: https://xgboost.readthedocs.io/en/stable/install.html (Accessed: 9 November 2026).
+
+Pedregosa, F. et al. (2011) ‘Scikit-learn: machine learning in Python’, *Journal of Machine Learning Research*, 12, pp. 2825–2830.
+
+## Generative AI declaration — team confirmation required
+AI generative tools were used to assist with documentation and debugging, all work was reviewed by members in the team. Core logic was written and understood by members who were responsible for that section.

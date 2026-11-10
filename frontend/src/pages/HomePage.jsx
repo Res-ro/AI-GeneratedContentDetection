@@ -8,13 +8,13 @@ import { chrome } from '../theme.js';
 
 const FEATURES = [
   { icon: FileText, title: 'Start with your text', description: 'Paste a passage or upload a .txt or .docx file. Choose XGBoost or logistic regression to explore its writing patterns.' },
-  { icon: ScanLine, title: 'Look sentence by sentence', description: 'Go beyond an overall score. Inspect individual sentences and the writing features behind their estimates.' },
-  { icon: ChartColumn, title: 'See the bigger picture', description: 'Explore score distributions and confidence ranges, then export a PDF report to support your review.' },
+  { icon: ScanLine, title: 'Look sentence by sentence', description: 'Inspect individual sentences and the writing features behind their estimates.' },
+  { icon: ChartColumn, title: 'See the bigger picture', description: 'Explore score distributions and confidence ranges, and export a PDF report.' },
 ];
 const STEPS = [
   ['Add your writing', 'Use an English passage with at least one sentence of ten or more words.'],
   ['Explore the indicators', 'The model examines writing-style features and estimates AI likelihood for each eligible sentence.'],
-  ['Review with context', 'Compare the patterns, inspect the sentences, and use your own judgement alongside the results.'],
+  ['Review with context', 'Compare the patterns, inspect the sentences and use your own judgement to reach a decision.'],
 ];
 
 /** A schematic of the workflow, deliberately without invented prediction scores. */
@@ -51,7 +51,7 @@ function AnalysisIllustration() {
           </Box>
         ))}
       </Box>
-      <Typography variant="caption" component="p" sx={{ color: chrome.onDark, mt: 2.5 }}>Illustration of the analysis process, not a sample result.</Typography>
+      <Typography variant="caption" component="p" sx={{ color: chrome.onDark, mt: 2.5 }}>Illustration of the analysis process.</Typography>
     </Box>
   );
 }
@@ -83,7 +83,7 @@ export default function HomePage() {
               Look beyond<br />the <Box component="span" sx={{ color: 'primary.main' }}>words.</Box>
             </Typography>
             <Typography sx={{ mt: 3, fontSize: { xs: '1.05rem', sm: '1.15rem' }, color: 'text.secondary', maxWidth: 480 }}>
-              Explore indicators of AI-generated writing. Understand the patterns in your text with sentence-level estimates and clear visual insights.
+              Explore indicators of AI-generated writing in a piece of text.
             </Typography>
             <Button component={RouterLink} to="/analyse" variant="contained" size="large" endIcon={<ArrowRight size={19} aria-hidden />} sx={{ mt: 3.5, px: 3, minHeight: 52 }}>
               Start analysing
@@ -126,7 +126,7 @@ export default function HomePage() {
           <Info size={22} color={chrome.primary} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
           <Box>
             <Typography sx={{ fontWeight: 700, color: chrome.deep, mb: 0.5 }}>An indicator, not a verdict.</Typography>
-            <Typography variant="body2" color="text.secondary">AI-detection results are probabilistic estimates and can be wrong. They are not definitive proof of authorship. Always consider the context and other evidence when interpreting a result.</Typography>
+            <Typography variant="body2" color="text.secondary">AI-detection results are estimates from machine learning models and can be wrong. They are not definitive proof of AI usage. Always consider the context and other evidence when interpreting results from this tool.</Typography>
           </Box>
         </Box>
       </Container>
