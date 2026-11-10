@@ -61,22 +61,23 @@ class SentenceResult(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
+    """Analysis output. The schema example is illustrative, not a measured result."""
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
                 {
                     "verdict": "ai_generated",
-                    "confidence": 0.82,
-                    "ai_score": 0.82,
-                    "ai_sentence_ratio": 0.67,
+                    "confidence": 0.75,
+                    "ai_score": 0.75,
+                    "ai_sentence_ratio": 1.0,
                     "model": "xgboost",
                     "threshold": 0.9,
-                    "sentence_count": 2,
+                    "sentence_count": 1,
                     "skipped_sentences": 0,
-                    "word_count": 40,
+                    "word_count": 13,
                     "suspicious_characters": 0,
                     "warnings": [],
-                    "feature_means": {"word_count": 20.0, "avg_word_length": 5.9},
+                    "feature_means": {"word_count": 13.0, "avg_word_length": 6.6},
                     "sentences": [
                         {
                             "index": 0,
@@ -96,8 +97,8 @@ class AnalyzeResponse(BaseModel):
     verdict: Label = Field(description="Overall result for the whole text.")
     confidence: float = Field(
         ge=0.5, le=1,
-        description="Confidence in the verdict, from 0.5 (a coin flip) to 1.0 (certain). It is "
-        "max(ai_score, 1 - ai_score).",
+        description="Heuristic verdict strength, max(ai_score, 1 - ai_score), from 0.5 to 1. "
+        "Not a calibrated probability or certainty of authorship.",
     )
     ai_score: float = Field(
         ge=0, le=1,

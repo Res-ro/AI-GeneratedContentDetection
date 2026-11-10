@@ -1,8 +1,8 @@
 /**
  * storage.js – History, feedback and settings, kept in this browser only.
  *
- * The back end has no database (see its threat model), so nothing here is
- * sent anywhere. localStorage can be full, disabled or cleared, so every read
+ * These values stay in this browser, separate from the backend's evaluation
+ * SQLite snapshot. localStorage can be full, disabled or cleared, so every read
  * and write is wrapped and the app still works without it.
  */
 

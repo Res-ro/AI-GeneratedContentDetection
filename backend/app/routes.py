@@ -5,11 +5,11 @@ from functools import partial
 from fastapi import APIRouter, Depends, Request
 
 from app.concurrency import Deadline
-from app.errors import ErrorResponse
+from app.errors import ErrorResponse, documented_errors
 from app.rate_limit import enforce_rate_limit
 from app.schemas import AnalyzeRequest, AnalyzeResponse, HealthResponse, ModelInfoResponse
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", responses=documented_errors(400, 404, 405, 413, 422, 500))
 
 
 def _ERR(description: str) -> dict:

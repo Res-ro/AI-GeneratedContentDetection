@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import Settings
-from app.errors import error_payload, unexpected_error_response
+from app.errors import error_payload, unexpected_error_response, _status_to_code
 
 logger = logging.getLogger("aidetect.access")
 
@@ -42,9 +42,14 @@ class BodySizeLimitMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
 
-        declared = dict(scope["headers"]).get(b"content-length")
+        lengths = [value for key, value in scope['headers'] if key.lower() == b'content-length']
+        if len(lengths) > 1:
+            return await self._reject(scope, send, 400, 'bad_request', 'Invalid Content-Length header.')
+        declared = lengths[0] if lengths else None
         if declared is not None:
             try:
+                if not declared.isdigit():
+                    raise ValueError('Content-Length must contain ASCII digits only')
                 too_big = int(declared) > self.max_bytes
             except ValueError:
                 return await self._reject(scope, send, 400, "bad_request", "Invalid Content-Length header.")
@@ -87,6 +92,41 @@ class BodySizeLimitMiddleware:
         await send({"type": "http.response.body", "body": body})
 
 
+class MiddlewareErrorEnvelope:
+    """Format plain-text middleware errors without replacing their validation.
+
+    TrustedHost and CORS still decide which requests to reject. Their status and
+    CORS/Allow headers are retained; untrusted rejection text is never echoed.
+    """
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http':
+            return await self.app(scope, receive, send)
+        replacement = None
+
+        async def enveloped_send(message):
+            nonlocal replacement
+            if message['type'] == 'http.response.start':
+                headers = message.get('headers', [])
+                content_type = dict(headers).get(b'content-type', b'')
+                if message['status'] >= 400 and not content_type.startswith(b'application/json'):
+                    replacement = json.dumps(error_payload(
+                        _status_to_code(message['status']), 'The request could not be completed.',
+                        scope.get('state', {}).get('request_id'),
+                    )).encode()
+                    headers = [(k, v) for k, v in headers if k.lower() not in (b'content-type', b'content-length')]
+                    message = {**message, 'headers': headers + [(b'content-type', b'application/json'), (b'content-length', str(len(replacement)).encode())]}
+            elif message['type'] == 'http.response.body' and replacement is not None:
+                if message.get('more_body', False):
+                    return
+                message = {'type': 'http.response.body', 'body': replacement}
+            await send(message)
+
+        await self.app(scope, receive, enveloped_send)
+
+
 def install_middleware(app: FastAPI, settings: Settings) -> None:
     """Order matters: the LAST one added is the OUTERMOST."""
 
@@ -98,12 +138,20 @@ def install_middleware(app: FastAPI, settings: Settings) -> None:
             response = await call_next(request)
         except Exception as exc:  # last line of defence: never leak a traceback
             response = unexpected_error_response(request, exc)
+            # This catch-all is outside CORS so even host/preflight rejections
+            # receive context. Retain CORS on unexpected failures for our UI.
+            origin = request.headers.get('origin')
+            if origin in settings.cors_origin_list:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Vary'] = 'Origin'
+                response.headers['Access-Control-Expose-Headers'] = 'Retry-After, X-Request-ID'
 
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response.headers["Cache-Control"] = "no-store"
+        response.headers['X-Request-ID'] = request_id
         response.headers["Content-Security-Policy"] = (
             _DOCS_CSP if request.url.path in _DOCS_PATHS else _API_CSP
         )
@@ -119,14 +167,15 @@ def install_middleware(app: FastAPI, settings: Settings) -> None:
         return response
 
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_body_bytes)
-    app.add_middleware(BaseHTTPMiddleware, dispatch=request_context)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,  # exact origins only, never "*"
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
-        expose_headers=["Retry-After"],
+        expose_headers=["Retry-After", "X-Request-ID"],
         max_age=600,
     )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_host_list)
+    app.add_middleware(MiddlewareErrorEnvelope)
+    app.add_middleware(BaseHTTPMiddleware, dispatch=request_context)

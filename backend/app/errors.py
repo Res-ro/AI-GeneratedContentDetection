@@ -134,6 +134,18 @@ def _status_to_code(status: int) -> str:
     }.get(status, "http_error")
 
 
+def documented_errors(*statuses: int) -> dict:
+    """Reusable OpenAPI error contracts, with explicitly illustrative examples."""
+    descriptions = {400: 'Invalid request headers or rejected CORS preflight.', 404: 'Unknown route or document.',
+                    405: 'Unsupported HTTP method.', 413: 'Request body exceeds the size limit.',
+                    422: 'Invalid JSON, query parameters or request fields.', 429: 'Per-client rate limit exceeded.',
+                    500: 'Unexpected server error; details logged only on the server.', 503: 'Service or evaluation dataset unavailable.'}
+    codes = {422: 'validation_error', 500: 'internal_error', 503: 'service_busy'}
+    return {status: {'model': ErrorResponse, 'description': descriptions[status], 'content': {'application/json': {
+        'examples': {'illustrative_error': {'summary': 'Illustrative error envelope', 'value': error_payload(
+            codes.get(status, _status_to_code(status)), descriptions[status], 'illustrative-request-id')}}}}} for status in statuses}
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError):

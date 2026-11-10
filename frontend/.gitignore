@@ -1,2 +1,4 @@
 # Regenerable Vite production output.
 /dist/
+.env.local
+.env.*.local

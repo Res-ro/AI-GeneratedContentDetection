@@ -39,7 +39,10 @@ def post(client, **body):
 
 def assert_error_format(response, status, code):
     assert response.status_code == status
+    assert response.headers['content-type'].startswith('application/json')
     body = response.json()
+    assert body['request_id'] and body['request_id'] == response.headers['x-request-id']
+    assert response.headers['x-content-type-options'] == 'nosniff'
     assert set(body) == {"error", "request_id"}
     assert body["error"]["code"] == code
     assert set(body["error"]) == {"code", "message", "details"}
@@ -68,6 +71,19 @@ def test_docs_describe_every_endpoint(client):
     for path, methods in spec["paths"].items():
         for op in methods.values():
             assert op.get("summary") and op.get("description"), path
+            schema = op['responses']['200']['content']['application/json']['schema']
+            assert '$ref' in schema or 'anyOf' in schema, path
+            for parameter in op.get('parameters', []):
+                assert parameter.get('description'), (path, parameter['name'])
+                assert parameter['schema'].get('examples') or parameter.get('examples'), (path, parameter['name'])
+            for status in ('400', '404', '405', '413', '422', '500'):
+                assert op['responses'][status]['content']['application/json']['schema']['$ref'].endswith('/ErrorResponse')
+            refs = [schema['$ref']] if '$ref' in schema else [s['$ref'] for s in schema['anyOf']]
+            for ref in refs:
+                assert spec['components']['schemas'][ref.split('/')[-1]].get('examples'), ref
+            if 'requestBody' in op:
+                body_schema = op['requestBody']['content']['application/json']['schema']
+                assert body_schema.get('$ref')
     assert "examples" in spec["components"]["schemas"]["AnalyzeRequest"]
 
 
@@ -140,7 +156,53 @@ def test_cors_only_allows_own_frontend(client):
 def test_security_headers_and_host_check(client):
     h = client.get("/api/health").headers
     assert h["x-frame-options"] == "DENY" and "default-src 'none'" in h["content-security-policy"]
-    assert client.get("/api/health", headers={"Host": "evil.com"}).status_code == 400
+    assert_error_format(client.get("/api/health", headers={"Host": "evil.com"}), 400, 'bad_request')
+
+
+@pytest.mark.parametrize('declared', ['-1', '+12', 'abc', '1.5', ''])
+def test_invalid_content_length_envelope(client, declared):
+    response = client.post('/api/analyze', content=b'{}', headers={'Content-Length': declared})
+    assert_error_format(response, 400, 'bad_request')
+
+
+def test_malformed_json_envelope(client):
+    response = client.post('/api/analyze', content=b'{"text": secret', headers={'Content-Type': 'application/json'})
+    assert_error_format(response, 422, 'validation_error')
+    assert 'secret' not in response.text
+
+
+def test_cors_preflight_rejection_envelope(client):
+    response = client.options('/api/analyze', headers={'Origin': 'http://localhost:5173', 'Access-Control-Request-Method': 'DELETE'})
+    assert_error_format(response, 400, 'bad_request')
+    assert response.headers['access-control-allow-origin'] == 'http://localhost:5173'
+    bad_origin = client.options('/api/analyze', headers={'Origin': 'http://evil.example', 'Access-Control-Request-Method': 'POST'})
+    assert_error_format(bad_origin, 400, 'bad_request')
+    assert 'access-control-allow-origin' not in bad_origin.headers
+    ok = client.options('/api/analyze', headers={'Origin': 'http://localhost:5173', 'Access-Control-Request-Method': 'POST'})
+    assert ok.status_code == 200
+
+
+@pytest.mark.parametrize('kind', ['busy', 'timeout'])
+def test_inference_error_http_envelopes(client, monkeypatch, kind):
+    from app.errors import InferenceTimeoutError
+    def reject(*args, **kwargs):
+        raise ServiceBusyError(headers={'Retry-After': '2'}) if kind == 'busy' else InferenceTimeoutError()
+    monkeypatch.setattr(client.app.state.model_service, 'analyse', reject)
+    response = post(client, text=GOOD_TEXT)
+    assert_error_format(response, 503, 'service_busy' if kind == 'busy' else 'analysis_timeout')
+    if kind == 'busy':
+        assert response.headers['retry-after'] == '2'
+
+
+def test_unexpected_errors_logged_with_cors(client, monkeypatch, caplog):
+    def fail(*args, **kwargs):
+        raise RuntimeError('test-only-internal-error')
+    monkeypatch.setattr(client.app.state.model_service, 'analyse', fail)
+    response = client.post('/api/analyze', json={'text': GOOD_TEXT}, headers={'Origin': 'http://localhost:5173'})
+    assert_error_format(response, 500, 'internal_error')
+    assert 'test-only-internal-error' not in response.text
+    assert 'test-only-internal-error' in caplog.text
+    assert response.headers['access-control-allow-origin'] == 'http://localhost:5173'
 
 
 # ---- rate limiting -------------------------------------------------------------------

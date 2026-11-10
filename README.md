@@ -1,9 +1,73 @@
 # AI-GeneratedContentDetection
 A group project developed for COS30049 – Computing Technology Innovation Project at Swinburne University of Technology
 
-## Setup and required libraries
+## Run the application
 
-Run all commands from the project root (the folder containing both Python scripts). Ensure Python is installed
+Use **64-bit Python 3.12** and **Node.js 20.19.x or >=22.12.0**. The committed classifiers are ready to use; running the app does not require retraining or replacing models.
+
+Windows also requires the Microsoft Visual C++ Redistributable (x64 for a 64-bit x86 Python installation); see the [backend prerequisites](backend/README-backend.md#installation-and-startup).
+
+From the repository root, **Windows PowerShell**, terminal 1:
+
+```powershell
+cd backend
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m nltk.downloader punkt punkt_tab
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-server-header
+```
+
+**Linux Bash**, terminal 1 (Python 3.12, venv support and the OpenMP runtime must be installed):
+
+```bash
+cd backend
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m nltk.downloader punkt punkt_tab
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-server-header
+```
+
+For **Windows Git Bash**, create the environment with `py -3.12 -m venv .venv`, activate with `source .venv/Scripts/activate`, then use the same `python` commands. The uvloop platform marker skips it automatically on Windows.
+
+Terminal 2, from the repository root (PowerShell or Bash):
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open **http://localhost:5173**. API docs: **http://localhost:8000/docs**. Detailed prerequisites, configuration and checks: [backend README](backend/README-backend.md) and [frontend README](frontend/README.md). The frontend's optional `.env.example` supplies the default API URL; no manual dependency edits are needed.
+
+## Architecture and submission documentation
+
+```mermaid
+flowchart LR
+    UI[React and Material UI] --> API[FastAPI validation and security controls]
+    API --> LIVE[Guarded saved-model inference]
+    LIVE --> UI
+    CSV[Prediction CSV] --> IMPORT[Offline validation and aggregation]
+    IMPORT --> SQLITE[(Read-only evaluation SQLite)]
+    API -->|Opt-in Model Performance| SQLITE
+    UI --> LOCAL[Browser history and feedback]
+```
+
+The live and precomputed flows share the existing score transformation, while remaining separate workflows. Models, thresholds and prediction calculations are preserved.
+
+- [API schemas, threat model and limitations](backend/README-backend.md#api-contracts-and-errors).
+- [Section 2.7 defences](backend/README-backend.md#defences-submitted-for-marking): **Advanced — denial of service**; **Intermediate — misconfiguration and vulnerable dependencies**.
+- [Section 2.8 Unicode experiment and reproducible commands](backend/README-backend.md#section-28--repeated-unicode-evasion-experiment).
+- [Harvard references and team AI declaration placeholders](backend/README-backend.md#references-harvard-style). The team must complete the declaration from its actual records.
+- [Dated verification, evidence locations and remaining submission actions](FINALISATION.md).
+
+Both experiment scripts require explicit `--run-local`, use bounded local execution, omit passage text from results and write ignored evidence to `backend/experiments/results/`. No successful result should be claimed without its actual run/configuration. Dataset access is disabled by default; public exposure requires distribution permission and access controls. CORS is not authentication.
+
+## Optional offline data-processing libraries
+
+The following historical workflow is for regenerating datasets/training outputs, **not application installation**. It is not needed for submission startup or the security experiments, and does not change the saved models unless explicitly run.
+
+Run the optional offline commands below from the repository root.
 
 Install the required third-party libraries and the spaCy English language model:
 

@@ -17,20 +17,20 @@ class DatasetUnavailable(AppError):
 
 
 class RecordFilters(BaseModel):
-    split: Literal['Test', 'Training', 'Validation', 'All'] = 'Test'
-    level: Literal['document', 'sentence'] = 'document'
-    model: Literal['xgboost', 'logistic'] = 'xgboost'
-    actual: Literal['all', '0', '1'] = 'all'
-    predicted: Literal['all', '0', '1'] = 'all'
-    outcome: Literal['all', 'correct', 'incorrect', 'tp', 'tn', 'fp', 'fn'] = 'all'
-    agreement: Literal['all', 'both_correct', 'both_wrong', 'xgboost_only', 'logistic_only'] = 'all'
-    score_min: float = Field(default=0, ge=0, le=1)
-    score_max: float = Field(default=1, ge=0, le=1)
-    q: str = Field(default='', max_length=200)
-    sort: Literal['score', 'correct', 'document_id', 'sentence_count'] = 'document_id'
-    direction: Literal['asc', 'desc'] = 'asc'
-    page: int = Field(default=1, ge=1, le=1000000)
-    page_size: int = Field(default=25, ge=1, le=100)
+    split: Literal['Test', 'Training', 'Validation', 'All'] = Field('Test', description='Original split; All includes training.', examples=['Test'])
+    level: Literal['document', 'sentence'] = Field('document', description='Unit of each returned row.', examples=['document'])
+    model: Literal['xgboost', 'logistic'] = Field('xgboost', description='Model used for prediction/outcome/score filters and sorting.', examples=['xgboost'])
+    actual: Literal['all', '0', '1'] = Field('all', description='Supplied ground truth: 0 human, 1 AI.', examples=['1'])
+    predicted: Literal['all', '0', '1'] = Field('all', description='Selected model verdict: 0 human, 1 AI.', examples=['0'])
+    outcome: Literal['all', 'correct', 'incorrect', 'tp', 'tn', 'fp', 'fn'] = Field('all', description='Correctness category; AI is positive.', examples=['fn'])
+    agreement: Literal['all', 'both_correct', 'both_wrong', 'xgboost_only', 'logistic_only'] = Field('all', description='Which models correctly classified the example.', examples=['xgboost_only'])
+    score_min: float = Field(default=0, ge=0, le=1, description='Inclusive minimum re-centred score.', examples=[0.2])
+    score_max: float = Field(default=1, ge=0, le=1, description='Inclusive maximum re-centred score, at least score_min.', examples=[0.8])
+    q: str = Field(default='', max_length=200, description='Document-ID substring or sentence word prefixes. Multiple words must match one sentence.', examples=['artificial'])
+    sort: Literal['score', 'correct', 'document_id', 'sentence_count'] = Field('document_id', description='Sort key; IDs are alphabetical, ties use internal record ID.', examples=['score'])
+    direction: Literal['asc', 'desc'] = Field('asc', description='Sort direction.', examples=['desc'])
+    page: int = Field(default=1, ge=1, le=1000000, description='One-based page, clamped to available pages.', examples=[1])
+    page_size: int = Field(default=25, ge=1, le=100, description='Maximum records per page.', examples=[25])
 
     @model_validator(mode='after')
     def range_order(self):
