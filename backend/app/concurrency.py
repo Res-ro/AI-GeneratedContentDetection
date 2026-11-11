@@ -2,17 +2,6 @@
 
 Running the model costs far more than receiving a request, so an attacker can
 tie the server up with a few expensive requests. Three mechanisms work together:
-
-1. Inference runs in a small dedicated thread pool, never in the event loop,
-   so cheap endpoints (/api/health) stay responsive during a heavy analysis.
-2. InferenceGate admits at most `workers` analyses at once plus a short queue.
-   Anything beyond that is rejected immediately with 503 instead of piling up,
-   and a queued request that waits too long is also given a 503.
-3. Deadline is a cooperative time limit checked between sentences, so one
-   pathological input cannot hold a worker indefinitely.
-
-The cost of all this: legitimate users get a 503 during bursts, and a very long
-text can be refused with a time-out.
 """
 import asyncio
 import time

@@ -1,12 +1,3 @@
-/**
- * client.js – every call to the FastAPI back end goes through here.
- *
- * The back end returns one error shape for every failure:
- *   { "error": { "code", "message", "details": [{ field, message }] }, "request_id" }
- * request() turns that (and network failures / timeouts) into an ApiError,
- * so the pages only ever deal with one kind of error.
- */
-
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 const DEFAULT_TIMEOUT_MS = 30_000;

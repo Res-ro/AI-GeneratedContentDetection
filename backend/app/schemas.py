@@ -61,7 +61,7 @@ class SentenceResult(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    """Analysis output. The schema example is illustrative, not a measured result."""
+    """Analysis output. The schema example is illustrative"""
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [

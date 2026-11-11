@@ -1,10 +1,3 @@
-"""Loads the trained models once at start-up and turns text into a verdict.
-
-The pipeline mirrors training exactly:
-    text -> (normalise) -> sentences (NLTK) -> 12 features per sentence (spaCy)
-         -> [scaler for logistic only] -> classifier -> probability per sentence
-and then combines the sentence results into one document verdict.
-"""
 import logging
 import queue
 import threading

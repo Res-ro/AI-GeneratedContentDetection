@@ -1,11 +1,5 @@
 """Input normalisation: the defence against Unicode detection evasion.
 
-The classifier only sees counts and ratios computed from characters. An
-attacker can change those numbers without changing what a person reads, by
-swapping Latin letters for look-alikes (Cyrillic "а" for Latin "a"), inserting
-zero-width characters inside words, or adding combining marks. This module
-maps all of those back to plain characters *before* feature extraction.
-
 Deliberately NOT done: curly quotes and apostrophes are left alone, because the
 training pipeline did not touch them and the model must see its input the same
 way it saw its training data.

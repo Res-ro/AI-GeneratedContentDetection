@@ -23,7 +23,9 @@ _DOCS_CSP = (
     "script-src 'unsafe-inline' https://cdn.jsdelivr.net; "
     "style-src 'unsafe-inline' https://cdn.jsdelivr.net; "
     "img-src 'self' data: https://fastapi.tiangolo.com; "
-    "connect-src 'self'; frame-ancestors 'none'"
+    "connect-src 'self'; "
+    "form-action 'none'; "
+    "frame-ancestors 'none'"
 )
 
 
@@ -128,7 +130,7 @@ class MiddlewareErrorEnvelope:
 
 
 def install_middleware(app: FastAPI, settings: Settings) -> None:
-    """Order matters: the LAST one added is the OUTERMOST."""
+    """the LAST one added is the OUTERMOST"""
 
     async def request_context(request: Request, call_next):
         request_id = uuid.uuid4().hex
@@ -158,7 +160,7 @@ def install_middleware(app: FastAPI, settings: Settings) -> None:
         if settings.enable_hsts:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
-        # Method, path and status only. Request bodies (the user's text) are never logged.
+        # Method, path and status only.
         logger.info(
             "%s %s -> %s in %.0f ms (request_id=%s)",
             request.method, request.url.path, response.status_code,

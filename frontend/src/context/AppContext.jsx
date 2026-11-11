@@ -1,10 +1,3 @@
-/**
- * AppContext – state that several pages share:
- *   - serverStatus / modelInfo: read once from GET /api/model-info, so the
- *     form's limits always match the server's (no hard-coded 10,000)
- *   - current: the analysis being looked at on the Results screens
- *   - settings: default model, whether to keep a history
- */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { addToHistory, loadSettings, saveSettings } from '../lib/storage.js';
